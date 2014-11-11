@@ -273,6 +273,11 @@ void Connection::consume(char* input, size_t size) {
               handler->dec_ref();
               break;
 
+            case Handler::REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
+              // we must wait for the write callback before we can do the cleanup
+              handler->set_state(Handler::REQUEST_STATE_READ_BEFORE_WRITE);
+              break;
+
             default:
               assert(false && "Invalid request state after receiving response");
               break;
@@ -405,8 +410,9 @@ void Connection::on_write(RequestWriter* writer) {
       }
       break;
 
-    case Handler::REQUEST_STATE_TIMEOUT:
+    case Handler::REQUEST_STATE_TIMEOUT_WRITE_OUTSTANDING:
       // The read may still come back, handle cleanup there
+      handler->set_state(Handler::REQUEST_STATE_TIMEOUT);
       break;
 
     case Handler::REQUEST_STATE_READ_BEFORE_WRITE:
